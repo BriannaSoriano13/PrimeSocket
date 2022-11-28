@@ -1,0 +1,107 @@
+package com.example.primesocket;
+
+import javafx.application.Application;
+import javafx.event.EventHandler;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class Client extends Application {
+
+    TextArea textArea;
+    TextField textField;
+
+    DataOutputStream out;
+
+    @Override
+    public void start(Stage stage) throws IOException {
+        textArea = new TextArea();
+        textArea.setEditable(false);
+        textArea.setMinWidth(330);
+        textArea.setMinHeight(280);
+
+
+
+        textField = new TextField();
+        textField.setAlignment(Pos.BASELINE_RIGHT);
+
+        textField.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent ke) {
+                if (ke.getCode().equals(KeyCode.ENTER)) {
+                    try {
+                        out.writeUTF(textField.getText());
+                        textField.setDisable(true);
+//                        textField.setText("");
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        });
+
+
+        HBox hBox = new HBox(new Label("Enter a number to check prime: "),textField);
+
+//        out.writeUTF(line);
+
+        VBox main = new VBox(hBox,textArea);
+        Scene scene = new Scene(main, 330, 300);
+        stage.setTitle("Hello!");
+        stage.setScene(scene);
+        stage.show();
+
+        net();
+    }
+
+    void net(){
+
+        new Thread(() -> {
+            try {
+                Socket socket = new Socket("127.0.0.1", 8088);
+                DataInputStream   input  = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
+                out  = new DataOutputStream(socket.getOutputStream());
+                System.out.println("connected!");
+
+                while (true){
+                    String line = input.readUTF();
+                    textField.setDisable(false);
+                    if(line.equals("yes")){
+                        textArea.appendText(textField.getText() + " is prime\n");
+                    }
+                    else{
+                        textArea.appendText(textField.getText() + " is not prime\n");
+                    }
+                    textField.setText("");
+                }
+//                input.close();
+//                out.close();
+//                socket.close();
+
+            }catch (Exception e){
+                System.out.println(e);
+            }
+        }).start();
+    }
+
+    public static void main(String[] args) {
+        launch();
+    }
+}
